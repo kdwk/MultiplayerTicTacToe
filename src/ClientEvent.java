@@ -17,6 +17,7 @@ public class ClientEvent implements Serializable {
         this.player = player;
     }
     private ClientEvent(ClientEventType eventType) {
+        this.eventType = eventType;
     }
 
     public static ClientEvent newPut(Player player, String cell) {

@@ -2,9 +2,15 @@
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayDeque;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
@@ -27,19 +33,24 @@ class Receive implements Runnable {
     }
 
     public void run() {
-        while (true) {
-            try {
-                ServerEvent event = (ServerEvent)(new ObjectInputStream(this.socket.getInputStream())).readObject();
-                app.receive(event);
-                Thread.sleep(100);
-            } catch (Exception e) {e.printStackTrace();}
-        }
+        try {
+            BufferedInputStream inputStream = new BufferedInputStream(this.socket.getInputStream());
+            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+            while (true) {
+                try {
+                    ServerEvent event = (ServerEvent)(objectInputStream.readObject());
+                    if (event != null) {
+                        app.receive(event);
+                    }
+                    Thread.sleep(100);
+                } catch (Exception e) {e.printStackTrace();}
+            }
+        } catch (IOException e) {e.printStackTrace(); System.exit(0);}
     }
 }
 
 class Send implements Runnable {
-    public static Queue<ClientEvent> sendEventQueue = new PriorityQueue<ClientEvent>();
-
+    public static Queue<ClientEvent> sendEventQueue = new ArrayDeque<ClientEvent>();
     Socket socket;
 
     Send() {
@@ -54,16 +65,21 @@ class Send implements Runnable {
     }
 
     public void run() {
-        while (true) {
-            try {
-                ClientEvent event = Send.sendEventQueue.poll();
-                if (event != null) {
-                    PrintWriter writer = new PrintWriter(this.socket.getOutputStream());
-                    writer.println(event);
-                }
-                Thread.sleep(100);
-            } catch (Exception e) {e.printStackTrace();}
-        }
+        try {
+            BufferedOutputStream outputStream = new BufferedOutputStream(this.socket.getOutputStream());
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+            while (true) {
+                try {
+                    ClientEvent event = Send.sendEventQueue.poll();
+                    if (event != null) {
+                        objectOutputStream.writeObject(event);
+                        objectOutputStream.flush();
+                        System.out.println(event.eventType.toString()+" event sent");
+                    }
+                    Thread.sleep(100);
+                } catch (Exception e) {e.printStackTrace();}
+            }
+        } catch (IOException e) {e.printStackTrace(); System.exit(0);}
     }
 }
 
@@ -236,8 +252,10 @@ public class App implements ActionListener, Client {
     }
 
     public void receive(ServerEvent event) {
+        System.out.println("1");
         switch (event.eventType) {
             case Assign:
+                System.out.println("2");
                 this.designator = event.player;
                 System.out.println(this.designator.toString());
                 break;
@@ -259,7 +277,7 @@ public class App implements ActionListener, Client {
      */
     App() {
         try {
-        new Send(); // new Receive(this);
+        new Send(); new Receive(this);
         view()
             .setVisible(true);
         } catch (NullPointerException e) {e.printStackTrace(); System.exit(0);}

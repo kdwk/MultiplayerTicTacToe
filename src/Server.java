@@ -138,6 +138,7 @@ class Session {
     }
 
     public Player connect() {
+        System.out.println(this.connected);
         Player player = Player.None;
 
         switch (this.connected) {
@@ -159,6 +160,7 @@ class Session {
 
 public class Server {
     ServerSocket serverSocket;
+    Socket clientSocket;
     Session session;
 
     Server() {
@@ -168,23 +170,32 @@ public class Server {
         try {
             this.serverSocket = new ServerSocket(5001);
             System.out.println("Listening to port 5001");
-            Socket socket = this.serverSocket.accept();
-            DataInputStream inputStream = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-            DataOutputStream outputStream = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            this.clientSocket = this.serverSocket.accept();
+            System.out.println("a");
+            BufferedOutputStream outputStream = new BufferedOutputStream(this.clientSocket.getOutputStream());
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+            System.out.println("b");
+            BufferedInputStream inputStream = new BufferedInputStream(clientSocket.getInputStream());
+            System.out.println("c1");
+            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+            System.out.println("c2");
             while (true) {
                 try {
-                    switch (((ClientEvent)objectInputStream.readObject()).eventType) {
-                        case Connect:
-                            System.out.println("A client has requested to connect");
-                            Player player = this.session.connect();
-                            ServerEvent response = ServerEvent.newAssign(player);
-                            objectOutputStream.writeObject(response);
-                            break;
+                    ClientEvent event = (ClientEvent)(objectInputStream.readObject());
+                    if (event != null) {
+                        switch (event.eventType) {
+                            case Connect:
+                                System.out.println("A client has requested to connect");
+                                Player player = this.session.connect();
+                                ServerEvent response = ServerEvent.newAssign(player);
+                                objectOutputStream.writeObject(response);
+                                objectOutputStream.flush();
+                                System.out.println(response.eventType.toString() + " event is sent");
+                                break;
                 
-                        default:
-                            break;
+                            default:
+                                break;
+                        }
                     }
                     Thread.sleep(50);
                 } catch (EOFException e) {
