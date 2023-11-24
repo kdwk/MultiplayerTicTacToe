@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.PriorityQueue;
 import java.util.Queue;
 
 import javax.swing.*;
@@ -37,14 +38,16 @@ class Receive implements Runnable {
 }
 
 class Send implements Runnable {
-    public static Queue<ClientEvent> sendEventQueue;
+    public static Queue<ClientEvent> sendEventQueue = new PriorityQueue<ClientEvent>();
 
     Socket socket;
 
     Send() {
+        System.out.println("a");
         try{
             this.socket = new Socket("127.0.0.1", 5001);
-        } catch (Exception e) {e.printStackTrace();}
+            System.out.println("b");
+        } catch (Exception e) {System.out.println("c"); e.printStackTrace(); System.exit(0);}
         Thread sendThread = new Thread(this);
         sendThread.setName("send");
         sendThread.start();
@@ -187,6 +190,7 @@ public class App implements ActionListener, Client {
                         Components.<JButton>get(i+"-"+j).setEnabled(true);
                     }
                 }
+                this.send(ClientEvent.newConnect());
                 break;
 
             case "XWon":
@@ -254,9 +258,11 @@ public class App implements ActionListener, Client {
      * Constructor of the App class. Creates the UI and sets it to visible.
      */
     App() {
-        new Send(); new Receive(this);
+        try {
+        new Send(); // new Receive(this);
         view()
             .setVisible(true);
+        } catch (NullPointerException e) {e.printStackTrace(); System.exit(0);}
     }
     
     /**

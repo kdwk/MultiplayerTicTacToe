@@ -152,6 +152,7 @@ class Session {
         }
 
         this.connected += 1;
+        System.out.println("Client is connected. Designator "+player.toString());
         return player;
     }
 }
@@ -161,12 +162,14 @@ public class Server {
     Session session;
 
     Server() {
+        System.out.println("Server up and running");
         this.session = new Session();
+        System.out.println("Session created");
         try {
             this.serverSocket = new ServerSocket(5001);
+            System.out.println("Listening to port 5001");
             Socket socket = this.serverSocket.accept();
             DataInputStream inputStream = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
-            // Process input from client
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
             DataOutputStream outputStream = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
@@ -174,6 +177,7 @@ public class Server {
                 try {
                     switch (((ClientEvent)objectInputStream.readObject()).eventType) {
                         case Connect:
+                            System.out.println("A client has requested to connect");
                             Player player = this.session.connect();
                             ServerEvent response = ServerEvent.newAssign(player);
                             objectOutputStream.writeObject(response);
