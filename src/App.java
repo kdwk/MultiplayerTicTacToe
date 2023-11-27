@@ -4,14 +4,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayDeque;
-import java.util.PriorityQueue;
 import java.util.Queue;
 
 import javax.swing.*;
@@ -42,7 +39,10 @@ class Receive implements Runnable {
                         app.receive(event);
                     }
                     Thread.sleep(100);
-                } catch (Exception e) {e.printStackTrace();}
+                } catch (Exception e) {
+                    try {Thread.sleep(100);} catch (Exception f) {}
+                    continue;
+                }
             }
         } catch (IOException e) {e.printStackTrace(); System.exit(0);}
     }
@@ -85,7 +85,7 @@ class Send implements Runnable {
 /**
  * A class to store information of the main app, UI code and button actions
  */
-public class App implements ActionListener, Client {
+public class App implements ActionListener, ClientInterface {
 
     Player designator;
 

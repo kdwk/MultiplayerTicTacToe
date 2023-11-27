@@ -1,22 +1,15 @@
-import java.awt.event.ActionListener;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.swing.JButton;
-
 import Builders.ArrayListBuilder;
-import Builders.Components;
 
 class Session {
     private HashMap<String, Player> cells = new HashMap<>();
@@ -162,28 +155,33 @@ class Session {
 
 public class Server {
     ServerSocket serverSocket;
-    Socket clientSocket;
     Session session;
 
     Server() {
         System.out.println("Server up and running");
         this.session = new Session();
         System.out.println("Session created");
+        // try {
+        //     this.serverSocket = new ServerSocket(5001);
+        //     Socket clientSocket = this.serverSocket.accept();
+        //     new Send(clientSocket); new Receive(this, clientSocket);
+        // } catch (Exception e) {e.printStackTrace(); System.exit(0);}
         try {
             this.serverSocket = new ServerSocket(5001);
             System.out.println("Listening to port 5001");
-            this.clientSocket = this.serverSocket.accept();
             System.out.println("a");
-            BufferedOutputStream outputStream = new BufferedOutputStream(this.clientSocket.getOutputStream());
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-            System.out.println("b");
-            BufferedInputStream inputStream = new BufferedInputStream(clientSocket.getInputStream());
-            System.out.println("c1");
-            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-            System.out.println("c2");
             while (true) {
                 try {
+                    Socket clientSocket = serverSocket.accept();
+                    BufferedOutputStream outputStream = new BufferedOutputStream(clientSocket.getOutputStream());
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+                    System.out.println("b");
+                    BufferedInputStream inputStream = new BufferedInputStream(clientSocket.getInputStream());
+                    System.out.println("c1");
+                    ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+                    System.out.println("c2");
                     ClientEvent event = (ClientEvent)(objectInputStream.readObject());
+                    System.out.println("ab");
                     if (event != null) {
                         switch (event.eventType) {
                             case Connect:
@@ -199,6 +197,10 @@ public class Server {
                                 break;
                         }
                     }
+                    objectOutputStream.close();
+                    outputStream.close();
+                    objectInputStream.close();
+                    inputStream.close();
                     Thread.sleep(50);
                 } catch (EOFException e) {
                     Thread.sleep(50);
@@ -209,6 +211,7 @@ public class Server {
             e.printStackTrace();
         }
     }
+
     public static void main(String[] args) throws IOException {
         new Server();
     }
