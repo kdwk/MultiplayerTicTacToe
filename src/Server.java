@@ -144,9 +144,11 @@ class Session {
         switch (this.connected) {
             case 0:
                 player = Player.X;
+                break;
             
             case 1:
                 player = Player.O;
+                break;
 
             default:
                 break;
@@ -190,7 +192,7 @@ public class Server {
                                 ServerEvent response = ServerEvent.newAssign(player);
                                 objectOutputStream.writeObject(response);
                                 objectOutputStream.flush();
-                                System.out.println(response.eventType.toString() + " event is sent");
+                                System.out.println(response.eventType.toString() + " event sent");
                                 break;
                 
                             default:

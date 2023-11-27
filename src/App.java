@@ -22,11 +22,9 @@ class Receive implements Runnable {
     Socket socket;
     App app;
 
-    Receive(App app) {
+    Receive(App app, Socket socket) {
         this.app = app;
-        try {
-            this.socket = new Socket("127.0.0.1", 5001);
-        } catch (Exception e) {e.printStackTrace();}
+        this.socket = socket;
         Thread receiveThread = new Thread(this);
         receiveThread.setName("receive");
         receiveThread.start();
@@ -40,6 +38,7 @@ class Receive implements Runnable {
                 try {
                     ServerEvent event = (ServerEvent)(objectInputStream.readObject());
                     if (event != null) {
+                        System.out.println(event.eventType+" event received");
                         app.receive(event);
                     }
                     Thread.sleep(100);
@@ -53,12 +52,9 @@ class Send implements Runnable {
     public static Queue<ClientEvent> sendEventQueue = new ArrayDeque<ClientEvent>();
     Socket socket;
 
-    Send() {
+    Send(Socket socket) {
+        this.socket = socket;
         System.out.println("a");
-        try{
-            this.socket = new Socket("127.0.0.1", 5001);
-            System.out.println("b");
-        } catch (Exception e) {System.out.println("c"); e.printStackTrace(); System.exit(0);}
         Thread sendThread = new Thread(this);
         sendThread.setName("send");
         sendThread.start();
@@ -277,10 +273,11 @@ public class App implements ActionListener, Client {
      */
     App() {
         try {
-        new Send(); new Receive(this);
+            Socket socket = new Socket("127.0.0.1", 5001);
+            new Send(socket); new Receive(this, socket);
+        } catch (Exception e) {e.printStackTrace(); System.exit(0);}
         view()
             .setVisible(true);
-        } catch (NullPointerException e) {e.printStackTrace(); System.exit(0);}
     }
     
     /**
