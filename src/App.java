@@ -73,7 +73,10 @@ class Send implements Runnable {
                         System.out.println(event.eventType.toString()+" event sent");
                     }
                     Thread.sleep(100);
-                } catch (Exception e) {e.printStackTrace();}
+                } catch (Exception e) {
+                    try {Thread.sleep(100);} catch (Exception f) {}
+                    continue;
+                }
             }
         } catch (IOException e) {e.printStackTrace(); System.exit(0);}
     }
@@ -191,17 +194,6 @@ public class App implements ActionListener, ClientInterface {
         System.out.println(event.getActionCommand());
         switch (event.getActionCommand()) {
             case "Submit":
-                String name = Components.<JTextField>get("NameInputField").getText();
-                Components.<JTextField>get("NameInputField").setEnabled(false);
-                Components.<JFrame>get("MainFrame").setTitle("Tic Tac Toe--Player: "+name);
-                Components.<JButton>get("Submit").setEnabled(false);
-                Components.<JLabel>get("HeaderLabel").setText("WELCOME "+name);
-                // this.session = new Session(this);
-                for (int i=1; i<=3; i++) {
-                    for (int j=1; j<=3; j++) {
-                        Components.<JButton>get(i+"-"+j).setEnabled(true);
-                    }
-                }
                 this.send(ClientEvent.newConnect());
                 break;
 
@@ -242,7 +234,7 @@ public class App implements ActionListener, ClientInterface {
                 break;
             
             default:
-                // this.session.put(event.getActionCommand());
+                this.send(ClientEvent.newPut(this.designator, event.getActionCommand()));
                 break;
         }
     }
@@ -254,9 +246,36 @@ public class App implements ActionListener, ClientInterface {
                 System.out.println("2");
                 this.designator = event.player;
                 System.out.println(this.designator.toString());
+                String name = Components.<JTextField>get("NameInputField").getText();
+                Components.<JTextField>get("NameInputField").setEnabled(false);
+                Components.<JFrame>get("MainFrame").setTitle("Tic Tac Toe--Player: "+name);
+                Components.<JButton>get("Submit").setEnabled(false);
+                Components.<JLabel>get("HeaderLabel").setText("WELCOME "+name);
+                // this.session = new Session(this);
                 break;
             
+            case BeginGame:
+                for (int i=1; i<=3; i++) {
+                    for (int j=1; j<=3; j++) {
+                        Components.<JButton>get(i+"-"+j).setEnabled(true);
+                    }
+                }
+                break;
+
+            case Put:
+                if (event.player != this.designator) {
+                    String s = "X";
+                    if (this.designator == Player.X) {s = "O";}
+                    Components.<JButton>get(event.cell).setText(s);
+                }
+                break;
+
             case Win:
+                if (event.player == this.designator) {
+                    JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"), "Congratulations. You won. Do you want to play again?", "Round over", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"), "You lost. Do you want to play again?", "Round over", JOptionPane.INFORMATION_MESSAGE);
+                }
                 break;
             
             default:

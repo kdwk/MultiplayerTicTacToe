@@ -1,3 +1,3 @@
 public enum Player {
-    X, O, None
+    X, O, None, Both
 }
