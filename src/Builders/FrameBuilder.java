@@ -2,6 +2,13 @@ package Builders;
 import javax.swing.*;
 
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * A class to allow building a JFrame using the Builder Pattern
@@ -88,6 +95,24 @@ public class FrameBuilder {
      */
     public FrameBuilder closeOperation(int closeOperation) {
         this.frame.setDefaultCloseOperation(closeOperation);
+        return this;
+    }
+
+    public FrameBuilder onClose(Runnable action) {
+        if (this.frame.getDefaultCloseOperation() != WindowConstants.DO_NOTHING_ON_CLOSE) {
+            System.out.println("DefaultCloseOperation of this Frame must be WindowConstants.DO_NOTHING");
+            System.exit(0);
+        }
+        this.frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                action.run();
+                e.getWindow().dispose();
+                new Timer().schedule(new TimerTask() {
+                    public void run() {System.exit(0);}
+                }, 250);
+            }
+        });
         return this;
     }
 

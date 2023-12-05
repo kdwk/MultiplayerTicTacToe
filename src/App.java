@@ -197,6 +197,10 @@ public class App implements ActionListener, ClientInterface {
                                         .build())
                                 .build())
                         .build())
+                .closeOperation(WindowConstants.DO_NOTHING_ON_CLOSE)
+                .onClose(() -> {
+                    this.send(ClientEvent.newDisconnect(this.designator));
+                })
                 .pack()
                 .build();
     }
@@ -345,7 +349,7 @@ public class App implements ActionListener, ClientInterface {
                 if (reply == JOptionPane.YES_OPTION) {
                     this.send(ClientEvent.newRestartGame());
                 } else {
-                    this.send(ClientEvent.newDisconnect());
+                    this.send(ClientEvent.newDisconnect(this.designator));
                 }
                 break;
 
@@ -356,6 +360,16 @@ public class App implements ActionListener, ClientInterface {
                 for (int i = 1; i <= 3; i++) {
                     for (int j = 1; j <= 3; j++) {
                         Components.<JButton>get(i + "-" + j).setText("");
+                    }
+                }
+                break;
+
+            case OpponentLeft:
+                JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"), "Game ends. One player left.",
+                        "Message", JOptionPane.INFORMATION_MESSAGE);
+                for (int i = 1; i <= 3; i++) {
+                    for (int j = 1; j <= 3; j++) {
+                        Components.<JButton>get(i + "-" + j).setEnabled(false);
                     }
                 }
                 break;
@@ -387,6 +401,7 @@ public class App implements ActionListener, ClientInterface {
 
     /**
      * Creates a new instance of the App
+     * 
      * @param args
      * @throws Exception
      */

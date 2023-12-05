@@ -9,6 +9,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import Builders.ArrayListBuilder;
 
@@ -175,6 +177,23 @@ public class Server {
                     if (session.isReadyToBeginGame()) {
                         broadcastReply(ServerEvent.newBeginGame());
                     }
+                    break;
+
+                case Disconnect:
+                    System.out.println("A player has left!");
+                    switch (event.player) {
+                        case X:
+                            acceptClientInputThreads.get(1).sendReply(ServerEvent.newOpponentLeft());
+                            break;
+                        case O:
+                            acceptClientInputThreads.get(0).sendReply(ServerEvent.newOpponentLeft());
+                            break;
+                        default:
+                            break;
+                    }
+                    new Timer().schedule(new TimerTask() {
+                        public void run() {System.exit(0);}
+                    }, 250);
                     break;
 
                 case Put:

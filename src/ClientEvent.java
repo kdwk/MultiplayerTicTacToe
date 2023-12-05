@@ -29,7 +29,7 @@ public class ClientEvent implements Serializable {
     public static ClientEvent newRestartGame() {
         return new ClientEvent(ClientEventType.RestartGame);
     }
-    public static ClientEvent newDisconnect() {
-        return new ClientEvent(ClientEventType.Disconnect);
+    public static ClientEvent newDisconnect(Player player) {
+        return new ClientEvent(ClientEventType.Disconnect, player);
     }
 }
