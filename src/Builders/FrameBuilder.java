@@ -97,7 +97,15 @@ public class FrameBuilder {
         this.frame.setDefaultCloseOperation(closeOperation);
         return this;
     }
-
+    
+    /**
+     * Sets the onClose operation of the window containing the JFrame. 
+     * When the window containing the JFrame is closed, 
+     * run the onClose operation, dispose of the window, 
+     * and quit the app after 250ms
+     * @param action A Runnable to be run when the window containing the JFrame is closed
+     * @return This FrameBuilder instance
+     */
     public FrameBuilder onClose(Runnable action) {
         if (this.frame.getDefaultCloseOperation() != WindowConstants.DO_NOTHING_ON_CLOSE) {
             System.out.println("DefaultCloseOperation of this Frame must be WindowConstants.DO_NOTHING");

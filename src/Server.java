@@ -13,10 +13,19 @@ import java.util.TimerTask;
 
 import Builders.ArrayListBuilder;
 
+/**
+ * A class to store information about the game session as well as various methods
+ * to assist in the progression of the game
+ */
 class Session {
+	
     private HashMap<String, Player> cells = new HashMap<>();
     private int connected = 0;
-
+    
+    /**
+     * Creates a new session by generating a new game board 
+     * and setting all of the cells to empty
+     */
     Session() {
         for (int i = 1; i <= 3; i++) {
             for (int j = 1; j <= 3; j++) {
@@ -83,26 +92,38 @@ class Session {
             return null;
         }
     }
-
-    public Player get(String id) {
-        return this.cells.get(id);
-    }
-
-    public Player put(Player player, String cell) {
+    
+    /**
+     * Change the ownership of a cell to a 
+     * certain Player
+     * @param player The Player making the move
+     * @param cell The cell to be marked
+     * @return The winner, null if no winner, Player.None if tie
+     */
+    Player put(Player player, String cell) {
         this.cells.put(cell, player);
         Player winner = this.checkWin();
         return winner;
     }
-
-    public boolean isReadyToBeginGame() {
+    
+    /**
+     * Whether the server has 2 connected Players 
+     * and thus is ready to start the game
+     * @return Whether the server has 2 connected Players
+     */
+    boolean isReadyToBeginGame() {
         if (this.connected == 2) {
             return true;
         } else {
             return false;
         }
     }
-
-    public Player connect() {
+    
+    /**
+     * Add a new Player to this server
+     * @return The designator of the new Player
+     */
+    Player connect() {
         Player player = Player.None;
 
         switch (this.connected) {
@@ -133,22 +154,58 @@ class Session {
     }
 }
 
+/**
+ * A class to store information of the server instance 
+ * as well as various methods to communicate with and process 
+ * input from clients
+ */
 public class Server {
+	
+	/**
+	 * The ServerSocket of this Server
+	 */
     ServerSocket serverSocket;
+    /**
+     * The game Session of this Server
+     * @see Session
+     */
     Session session;
+    /**
+     * An ArrayList of threads that are tasked with accepting 
+     * and processing client inputs
+     */
     ArrayList<AcceptClientInputThread> acceptClientInputThreads = new ArrayList<>();
+    /**
+     * A counter to see how many Players consented to 
+     * reset the Session when the game has ended
+     */
     int resetSessionConsentCount = 0;
-
+    
+    /**
+     * Broadcast a ServerEvent to all connected clients
+     * @param reply The ServerEvent to be sent
+     */
     void broadcastReply(ServerEvent reply) {
         for (AcceptClientInputThread thread : this.acceptClientInputThreads) {
             thread.sendReply(reply);
         }
     }
-
+    
+    /**
+     * A class to store information related to dealing with a 
+     * single client, as well as methods to communicate with and 
+     * process inputs from that client
+     */
     class AcceptClientInputThread implements Runnable {
-        Socket socket;
-        ObjectOutputStream outputStream;
-
+    	
+        private Socket socket;
+        private ObjectOutputStream outputStream;
+        
+        /**
+         * Constructs a new AcceptClientInputThread 
+         * with the given Socket
+         * @param socket The Socket connected to the client
+         */
         AcceptClientInputThread(Socket socket) {
             acceptClientInputThreads.add(this);
             this.socket = socket;
@@ -158,7 +215,13 @@ public class Server {
             Thread serverThread = new Thread(this);
             serverThread.start();
         }
-
+        
+        /**
+         * Process incoming ClientEvents from this connected client
+         * @param event The incoming ClientEvent
+         * @return The ServerEvent response
+         * @see ClientEvent
+         */
         ServerEvent process(ClientEvent event) {
             ServerEvent response = null;
             switch (event.eventType) {
@@ -220,7 +283,11 @@ public class Server {
             }
             return response;
         }
-
+        
+        /**
+         * Send a ServerEvent reply to this client
+         * @param reply The ServerEvent reply to be sent
+         */
         public void sendReply(ServerEvent reply) {
             try {
                 this.outputStream.writeObject(reply);
@@ -228,7 +295,12 @@ public class Server {
                 System.out.println(reply.eventType.toString() + " event sent");
             } catch (Exception e) {e.printStackTrace();}
         }
-
+        
+        /**
+         * Construct the input and output streams. Sets up a loop to continually 
+         * listen for ClientEvents from the input stream
+         * @see ClientEvent
+         */
         public void run() {
             try {
                 BufferedOutputStream outputStream = new BufferedOutputStream(this.socket.getOutputStream());
@@ -261,7 +333,14 @@ public class Server {
             } catch (Exception e) {e.printStackTrace();}
         }
     }
-
+    
+    /**
+     * Constructs a new instance of the Server. Creates a new game Session. 
+     * Binds to the 5001 port. 
+     * Sets up a loop to listen for new connections at that port 
+     * and start new AcceptClientInputThreads for each connected client.
+     * @see AcceptClientInputThread
+     */
     Server() {
         System.out.println("Server up and running");
         this.session = new Session();
@@ -275,7 +354,12 @@ public class Server {
             }
         } catch (Exception e) {e.printStackTrace();}
     }
-
+    
+    /**
+     * Constructs a new Server instance when the program starts
+     * @param args
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
         new Server();
     }

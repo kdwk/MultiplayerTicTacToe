@@ -18,18 +18,37 @@ import javax.swing.*;
 
 import Builders.*;
 
-class Receive implements Runnable {
+/**
+ * A class to deal with incoming ServerEvents from the Server
+ * @see ServerEvent
+ */
+class Receiver implements Runnable {
+	
     Socket socket;
     App app;
-
-    Receive(App app, Socket socket) {
+    
+    /**
+     * Constructs a new Receiver instance 
+     * with references to an App instance 
+     * and a Socket
+     * @param app The App instance
+     * @param socket The Socket connected to the Server
+     * @see App
+     * @see Server
+     */
+    Receiver(App app, Socket socket) {
         this.app = app;
         this.socket = socket;
         Thread receiveThread = new Thread(this);
         receiveThread.setName("receive");
         receiveThread.start();
     }
-
+    
+    /**
+     * Construct the input stream. Sets up a loop to continually listen to 
+     * ServerEvents from the input stream
+     * @see ServerEvent
+     */
     public void run() {
         try {
             BufferedInputStream inputStream = new BufferedInputStream(this.socket.getInputStream());
@@ -57,25 +76,42 @@ class Receive implements Runnable {
     }
 }
 
-class Send implements Runnable {
+/**
+ * A class to store a queue of outgoing messages to be sent 
+ * and methods to send them
+ */
+class Sender implements Runnable {
+	
+	private Socket socket;
+	/**
+	 * A send queue for ClientEvents waiting to be sent
+	 * @see ClientEvent
+	 */
     public static Queue<ClientEvent> sendEventQueue = new ArrayDeque<ClientEvent>();
-    Socket socket;
-
-    Send(Socket socket) {
+    
+    /**
+     * Constructs a new Sender instance.
+     * @param socket The Socket connected to the Server
+     */
+    Sender(Socket socket) {
         this.socket = socket;
         System.out.println("a");
         Thread sendThread = new Thread(this);
         sendThread.setName("send");
         sendThread.start();
     }
-
+    
+    /**
+     * Construct the output stream. Sets up a loop to continually 
+     * poll the send queue for new ClientEvents to be sent
+     */
     public void run() {
         try {
             BufferedOutputStream outputStream = new BufferedOutputStream(this.socket.getOutputStream());
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
             while (true) {
                 try {
-                    ClientEvent event = Send.sendEventQueue.poll();
+                    ClientEvent event = Sender.sendEventQueue.poll();
                     if (event != null) {
                         objectOutputStream.writeObject(event);
                         objectOutputStream.flush();
@@ -99,12 +135,28 @@ class Send implements Runnable {
 
 /**
  * A class to store information of the main app, UI code and button actions
+ * Implements the ActionListener and ClientInterface interfaces
+ * @see ClientInterface
  */
 public class App implements ActionListener, ClientInterface {
-
+	
+	/**
+	 * The designator of the player controlling this App instance
+	 */
     Player designator;
-    Player otherPlayer;
+    /**
+     * The designator of the opponent
+     */
+    Player opponent;
+    /**
+     * Whether the game has ended
+     */
     boolean gameHasEnded = false;
+    /**
+     * Whether this App is connected to the Server as a Client
+     * @see Server
+     * @see ClientInterface
+     */
     boolean isConnected = false;
 
     /**
@@ -239,7 +291,15 @@ public class App implements ActionListener, ClientInterface {
                 break;
         }
     }
-
+    
+    /**
+     * Sets up 
+     * how to deal with each type of incoming ServerEvents from 
+     * the Server. Required by the ClientInterface interface.
+     * @see ServerEvent
+     * @see Server
+     * @see ClientInterface
+     */
     public void receive(ServerEvent event) {
         switch (event.eventType) {
             case Assign:
@@ -247,10 +307,10 @@ public class App implements ActionListener, ClientInterface {
                 this.designator = event.player;
                 switch (this.designator) {
                     case X:
-                        this.otherPlayer = Player.O;
+                        this.opponent = Player.O;
                         break;
                     case O:
-                        this.otherPlayer = Player.X;
+                        this.opponent = Player.X;
                         break;
                     default:
                         break;
@@ -314,7 +374,7 @@ public class App implements ActionListener, ClientInterface {
                     reply = JOptionPane.showConfirmDialog(Components.<JFrame>get("MainFrame"),
                             "Congratulations. You won. Do you want to play again?", "Round over",
                             JOptionPane.YES_NO_OPTION);
-                } else if (event.player == this.otherPlayer) {
+                } else if (event.player == this.opponent) {
                     reply = JOptionPane.showConfirmDialog(Components.<JFrame>get("MainFrame"),
                             "You lost. Do you want to play again?", "Round over", JOptionPane.YES_NO_OPTION);
                 } else {
@@ -356,19 +416,29 @@ public class App implements ActionListener, ClientInterface {
                 break;
         }
     }
-
+    
+    /**
+     * Sets up how to send a ClientEvent message to the Server.
+     * Required by the ClientInterface interface
+     * @see ClientEvent
+     * @see ClientInterface
+     * @see Server
+     */
     public void send(ClientEvent event) {
-        Send.sendEventQueue.add(event);
+        Sender.sendEventQueue.add(event);
     }
 
     /**
-     * Constructor of the App class. Creates the UI and sets it to visible.
+     * Constructor of the App class. 
+     * Binds to the 127.0.0.1:5001 port.
+     * Creates an instance of both the Sender and Receiver
+     * Creates the UI and sets it to visible
      */
     App() {
         try {
             Socket socket = new Socket("127.0.0.1", 5001);
-            new Send(socket);
-            new Receive(this, socket);
+            new Sender(socket);
+            new Receiver(this, socket);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(0);
@@ -379,7 +449,6 @@ public class App implements ActionListener, ClientInterface {
 
     /**
      * Creates a new instance of the App
-     * 
      * @param args
      * @throws Exception
      */
