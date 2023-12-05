@@ -7,18 +7,14 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
 
 import Builders.ArrayListBuilder;
 
 class Session {
     private HashMap<String, Player> cells = new HashMap<>();
     private int connected = 0;
-    private Player current = Player.X;
 
     Session() {
         for (int i = 1; i <= 3; i++) {
@@ -26,7 +22,6 @@ class Session {
                 cells.put(i + "-" + j, Player.None);
             }
         }
-        this.renderCells();
     }
 
     private Player tripletBelongsTo(ArrayList<String> triplet) {
@@ -63,30 +58,6 @@ class Session {
         return true;
     }
 
-    private void renderCells() {
-        // for (int i=1; i<=3; i++) {
-        // for (int j=1; j<=3; j++) {
-        // String id = i+"-"+j;
-        // switch (this.cells.get(id)) {
-        // case X:
-        // Components.<JButton>get(id).setText("X");
-        // break;
-
-        // case O:
-        // Components.<JButton>get(id).setText("O");
-        // break;
-
-        // case None:
-        // Components.<JButton>get(id).setText("");
-        // break;
-
-        // default:
-        // break;
-        // }
-        // }
-        // }
-    }
-
     public Player get(String id) {
         return this.cells.get(id);
     }
@@ -109,19 +80,21 @@ class Session {
                 new ArrayListBuilder<String>("1-3", "2-3", "3-3").build()).build();
         if (triplets.stream().map(triplet -> this.tripletBelongsTo(triplet)).anyMatch(player -> player == Player.X)) {
             return Player.X;
-            // this.actionListener.actionPerformed(new ActionEvent(this,
-            // ActionEvent.ACTION_PERFORMED, "XWon"));
         } else if (triplets.stream().map(triplet -> this.tripletBelongsTo(triplet))
                 .anyMatch(player -> player == Player.O)) {
             return Player.O;
-            // this.actionListener.actionPerformed(new ActionEvent(this,
-            // ActionEvent.ACTION_PERFORMED, "OWon"));
         } else if (this.isFull()) {
             return Player.None;
-            // this.actionListener.actionPerformed(new ActionEvent(this,
-            // ActionEvent.ACTION_PERFORMED, "Tie"));
         } else {
             return null;
+        }
+    }
+
+    public boolean isReadyToBeginGame() {
+        if (this.connected == 2) {
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -160,51 +133,21 @@ class Session {
 public class Server {
     ServerSocket serverSocket;
     Session session;
-    ConcurrentHashMap<Player, ObjectOutputStream> clients = new ConcurrentHashMap<>();
+    ArrayList<AcceptClientInputThread> acceptClientInputThreads = new ArrayList<>();
+    int resetSessionConsentCount = 0;
 
-    class Reply implements Runnable {
-        static Queue<ServerEvent> responseQueue = new ArrayDeque<ServerEvent>();
-
-        Reply() {
-            Thread replyThread = new Thread(this);
-            replyThread.setName("reply");
-            replyThread.start();
-        }
-
-        public void run() {
-            System.out.println("Reply thread started");
-            while (true) {
-                ServerEvent response = Reply.responseQueue.poll();
-                if (response != null) {
-                    System.out.println("Polled " + response.eventType.toString() + " event.");
-                    try {
-                        switch (response.responseTarget) {
-                            case X:
-                            case O:
-                                clients.get(response.player).writeObject(response);
-                                clients.get(response.player).flush();
-                                break;
-                            case Both:
-                                clients.get(Player.X).writeObject(response);
-                                clients.get(response.player).flush();
-                                clients.get(Player.O).writeObject(response);
-                                clients.get(response.player).flush();
-                                break;
-                            default:
-                                break;
-                        }
-                        System.out.println(response.eventType.toString() + " event sent");
-                        Thread.sleep(50);
-                    } catch (Exception e) {e.printStackTrace();}
-                }
-            }
+    void broadcastReply(ServerEvent reply) {
+        for (AcceptClientInputThread thread : this.acceptClientInputThreads) {
+            thread.sendReply(reply);
         }
     }
 
     class AcceptClientInputThread implements Runnable {
         Socket socket;
+        ObjectOutputStream outputStream;
 
         AcceptClientInputThread(Socket socket) {
+            acceptClientInputThreads.add(this);
             this.socket = socket;
             try {
                 this.socket.setKeepAlive(true);
@@ -215,7 +158,7 @@ public class Server {
             serverThread.start();
         }
 
-        void decide(ClientEvent event, ObjectOutputStream objectOutputStream) {
+        ServerEvent process(ClientEvent event) {
             ServerEvent response = null;
             switch (event.eventType) {
                 case Connect:
@@ -227,10 +170,11 @@ public class Server {
                             break;
                         default:
                             response = ServerEvent.newAssign(player);
-                            clients.put(player, objectOutputStream);
                             break;
                     }
-                    Reply.responseQueue.add(response);
+                    if (session.isReadyToBeginGame()) {
+                        broadcastReply(ServerEvent.newBeginGame());
+                    }
                     break;
 
                 case Put:
@@ -238,22 +182,40 @@ public class Server {
                     System.out.println(event.cell + ": " + event.player.toString());
                     if (winner != null) {
                         System.out.println(winner + " won!");
-                        response = ServerEvent.newWin(winner);
-                    } else {
-                        response = ServerEvent.newPut(event.player, event.cell);
+                        broadcastReply(ServerEvent.newWin(winner));
                     }
-                    Reply.responseQueue.add(response);
+                    response = ServerEvent.newPut(event.player, event.cell);
+                    break;
+                
+                case RestartGame:
+                    resetSessionConsentCount += 1;
+                    if (resetSessionConsentCount == 2) {
+                        resetSessionConsentCount = 0;
+                        session = new Session();
+                        broadcastReply(ServerEvent.newClearBoard());
+                        response = ServerEvent.newBeginGame();
+                    }
                     break;
 
                 default:
                     break;
             }
+            return response;
+        }
+
+        public void sendReply(ServerEvent reply) {
+            try {
+                this.outputStream.writeObject(reply);
+                this.outputStream.flush();
+                System.out.println(reply.eventType.toString() + " event sent");
+            } catch (Exception e) {e.printStackTrace();}
         }
 
         public void run() {
             try {
                 BufferedOutputStream outputStream = new BufferedOutputStream(this.socket.getOutputStream());
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+                this.outputStream = objectOutputStream;
                 System.out.println("b");
                 BufferedInputStream inputStream = new BufferedInputStream(this.socket.getInputStream());
                 System.out.println("c1");
@@ -265,7 +227,12 @@ public class Server {
                         System.out.println("Event received!");
                         if (event != null) {
                             System.out.println("It's a " + event.eventType.toString() + " event!");
-                            this.decide(event, objectOutputStream);
+                            ServerEvent response = this.process(event);
+                            if (response.responseTarget == Player.Both) {
+                                broadcastReply(response);
+                            } else {
+                                this.sendReply(response);
+                            }
                         }
                         Thread.sleep(50);
                     } catch (Exception e) {
@@ -290,7 +257,6 @@ public class Server {
             this.serverSocket = new ServerSocket(5001);
             System.out.println("Listening to port 5001");
             System.out.println("a");
-            new Reply();
             while (true) {
                 Socket socket = serverSocket.accept();
                 System.out.println("b");

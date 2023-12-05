@@ -1,6 +1,6 @@
 import java.io.Serializable;
 
-enum ServerEventType {Assign, RefuseConnection, BeginGame, Put, Win}
+enum ServerEventType {Assign, RefuseConnection, BeginGame, Put, Win, ClearBoard}
 
 public class ServerEvent implements Serializable {
     public ServerEventType eventType;
@@ -36,5 +36,8 @@ public class ServerEvent implements Serializable {
     }
     public static ServerEvent newBeginGame() {
         return new ServerEvent(ServerEventType.BeginGame, Player.Both);
+    }
+    public static ServerEvent newClearBoard() {
+        return new ServerEvent(ServerEventType.ClearBoard, Player.Both);
     }
 }

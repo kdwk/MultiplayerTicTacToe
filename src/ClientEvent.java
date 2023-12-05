@@ -1,6 +1,6 @@
 import java.io.Serializable;
 
-enum ClientEventType {Connect, Put}
+enum ClientEventType {Connect, Put, RestartGame, Disconnect}
 
 public class ClientEvent implements Serializable {
     ClientEventType eventType;
@@ -25,5 +25,11 @@ public class ClientEvent implements Serializable {
     }
     public static ClientEvent newConnect() {
         return new ClientEvent(ClientEventType.Connect);
+    }
+    public static ClientEvent newRestartGame() {
+        return new ClientEvent(ClientEventType.RestartGame);
+    }
+    public static ClientEvent newDisconnect() {
+        return new ClientEvent(ClientEventType.Disconnect);
     }
 }
