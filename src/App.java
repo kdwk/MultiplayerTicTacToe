@@ -11,6 +11,8 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.swing.*;
 
@@ -120,6 +122,7 @@ public class App implements ActionListener, ClientInterface {
     JFrame view() {
         return new FrameBuilder("MainFrame")
                 .name("Tic Tac Toe")
+                .size(300, 350)
                 .menuBar(new MenuBarBuilder()
                         .add(new MenuBuilder()
                                 .label("Control")
@@ -137,6 +140,7 @@ public class App implements ActionListener, ClientInterface {
                         .add(new BoxBuilder()
                                 .layoutAxis(BoxLayout.LINE_AXIS)
                                 .add("HeaderLabel", new JLabel("Enter your player name..."))
+                                .maxSize(150, 50)
                                 .build())
                         .add(new GridBuilder()
                                 .dimensions(3, 3)
@@ -201,7 +205,6 @@ public class App implements ActionListener, ClientInterface {
                 .onClose(() -> {
                     this.send(ClientEvent.newDisconnect(this.designator));
                 })
-                .pack()
                 .build();
     }
 
@@ -216,37 +219,6 @@ public class App implements ActionListener, ClientInterface {
                 this.send(ClientEvent.newConnect());
                 break;
 
-            case "XWon":
-                for (int i = 1; i <= 3; i++) {
-                    for (int j = 1; j <= 3; j++) {
-                        Components.<JButton>get(i + "-" + j).setEnabled(false);
-                    }
-                }
-                JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"),
-                        "Congratulations. X won. Do you want to play again?", "Round over", JOptionPane.YES_NO_OPTION);
-                break;
-
-            case "OWon":
-                for (int i = 1; i <= 3; i++) {
-                    for (int j = 1; j <= 3; j++) {
-                        Components.<JButton>get(i + "-" + j).setEnabled(false);
-                    }
-                }
-                JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"),
-                        "Congratulations. X won. Do you want to play again?", "Round over", JOptionPane.YES_NO_OPTION);
-                break;
-
-            case "Tie":
-                for (int i = 1; i <= 3; i++) {
-                    for (int j = 1; j <= 3; j++) {
-                        Components.<JButton>get(i + "-" + j).setEnabled(false);
-                    }
-                }
-                JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"),
-                        "Congratulations. No one won. Do you want to play again?", "Round over",
-                        JOptionPane.YES_NO_OPTION);
-                break;
-
             case "Instructions":
                 String message = "Criteria for a valid move:\n- The move is not occupied by any mark.\n- The move is made in the player’s turn.\n- The move is made within the 3 x 3 board.\nThe game would continue and switch among the opposite player until it reaches either one of the following conditions:\n- Player 1 wins.\n- Player 2 wins. - Draw.";
                 JOptionPane.showMessageDialog(Components.<JFrame>get("MainFrame"), message, "Instructions",
@@ -254,7 +226,10 @@ public class App implements ActionListener, ClientInterface {
                 break;
 
             case "Exit":
-                System.exit(0);
+                this.send(ClientEvent.newDisconnect(this.designator));
+                new Timer().schedule(new TimerTask() {
+                    public void run() {System.exit(0);}
+                }, 250);
                 break;
 
             default:
@@ -314,7 +289,7 @@ public class App implements ActionListener, ClientInterface {
                             Components.<JButton>get(i + "-" + j).setEnabled(false);
                         }
                     }
-                    Components.<JLabel>get("HeaderLabel").setText("Valid move, wait for your opponent.");
+                    Components.<JLabel>get("HeaderLabel").setText("Valid move,\nwait for your opponent.");
                 } else {
                     if (!this.gameHasEnded) {
                         for (int i = 1; i <= 3; i++) {
@@ -322,7 +297,7 @@ public class App implements ActionListener, ClientInterface {
                                 Components.<JButton>get(i + "-" + j).setEnabled(true);
                             }
                         }
-                        Components.<JLabel>get("HeaderLabel").setText("Your opponent has moved, now is your turn");
+                        Components.<JLabel>get("HeaderLabel").setText("Your opponent has moved,\nnow is your turn");
                     }
                 }
                 break;
@@ -348,8 +323,11 @@ public class App implements ActionListener, ClientInterface {
                 }
                 if (reply == JOptionPane.YES_OPTION) {
                     this.send(ClientEvent.newRestartGame());
-                } else {
+                } else if (reply != -1) {
                     this.send(ClientEvent.newDisconnect(this.designator));
+                    new Timer().schedule(new TimerTask() {
+                        public void run() {System.exit(0);}
+                    }, 250);
                 }
                 break;
 

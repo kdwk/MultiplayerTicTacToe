@@ -1,6 +1,5 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -60,16 +59,6 @@ class Session {
         return true;
     }
 
-    public Player get(String id) {
-        return this.cells.get(id);
-    }
-
-    public Player put(Player player, String cell) {
-        this.cells.put(cell, player);
-        Player winner = this.checkWin();
-        return winner;
-    }
-
     private Player checkWin() {
         ArrayList<ArrayList<String>> triplets = new ArrayListBuilder<ArrayList<String>>(
                 new ArrayListBuilder<String>("1-1", "2-2", "3-3").build(),
@@ -81,15 +70,28 @@ class Session {
                 new ArrayListBuilder<String>("1-2", "2-2", "3-2").build(),
                 new ArrayListBuilder<String>("1-3", "2-3", "3-3").build()).build();
         if (triplets.stream().map(triplet -> this.tripletBelongsTo(triplet)).anyMatch(player -> player == Player.X)) {
+            System.out.println("X won!");
             return Player.X;
         } else if (triplets.stream().map(triplet -> this.tripletBelongsTo(triplet))
                 .anyMatch(player -> player == Player.O)) {
+            System.out.println("O won!");
             return Player.O;
         } else if (this.isFull()) {
+            System.out.println("It's a tie!");
             return Player.None;
         } else {
             return null;
         }
+    }
+
+    public Player get(String id) {
+        return this.cells.get(id);
+    }
+
+    public Player put(Player player, String cell) {
+        this.cells.put(cell, player);
+        Player winner = this.checkWin();
+        return winner;
     }
 
     public boolean isReadyToBeginGame() {
@@ -101,7 +103,6 @@ class Session {
     }
 
     public Player connect() {
-        System.out.println(this.connected);
         Player player = Player.None;
 
         switch (this.connected) {
@@ -153,9 +154,7 @@ public class Server {
             this.socket = socket;
             try {
                 this.socket.setKeepAlive(true);
-            } catch (SocketException e) {
-                e.printStackTrace();
-            }
+            } catch (SocketException e) {e.printStackTrace();}
             Thread serverThread = new Thread(this);
             serverThread.start();
         }
@@ -235,17 +234,14 @@ public class Server {
                 BufferedOutputStream outputStream = new BufferedOutputStream(this.socket.getOutputStream());
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
                 this.outputStream = objectOutputStream;
-                System.out.println("b");
                 BufferedInputStream inputStream = new BufferedInputStream(this.socket.getInputStream());
-                System.out.println("c1");
                 ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-                System.out.println("c2");
                 while (true) {
                     try {
                         ClientEvent event = (ClientEvent) (objectInputStream.readObject());
-                        System.out.println("Event received!");
+                        System.out.println("Event received");
                         if (event != null) {
-                            System.out.println("It's a " + event.eventType.toString() + " event!");
+                            System.out.println("It's a " + event.eventType.toString() + " event");
                             ServerEvent response = this.process(event);
                             if (response.responseTarget == Player.Both) {
                                 broadcastReply(response);
@@ -262,9 +258,7 @@ public class Server {
                         continue;
                     }
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) {e.printStackTrace();}
         }
     }
 
@@ -275,16 +269,11 @@ public class Server {
         try {
             this.serverSocket = new ServerSocket(5001);
             System.out.println("Listening to port 5001");
-            System.out.println("a");
             while (true) {
                 Socket socket = serverSocket.accept();
-                System.out.println("b");
                 new AcceptClientInputThread(socket);
-                System.out.println("c");
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) {e.printStackTrace();}
     }
 
     public static void main(String[] args) throws IOException {
